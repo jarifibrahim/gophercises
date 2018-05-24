@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -29,6 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 	var input string
+	var done = make(chan bool)
 	total := len(records)
 	correct := 0
 	// Start the quiz
@@ -36,19 +38,21 @@ func main() {
 		for index, record := range records {
 			fmt.Printf("Problem #%d: %s = ", index+1, record[0])
 			fmt.Scanln(&input)
-			if input == record[1] {
+			input = strings.TrimSpace(input)
+			if strings.ToLower(input) == strings.ToLower(record[1]) {
 				correct = correct + 1
 			}
 		}
-		end(correct, total)
+		done <- true
 	}()
 
 	// Wait for timeout
-	<-time.After(time.Duration(*tlimit) * time.Second)
-	end(correct, total)
-}
+	timeout := time.After(time.Duration(*tlimit) * time.Second)
 
-func end(correct int, total int) {
+	select {
+	case <-done:
+	case <-timeout:
+		fmt.Println("\nTimes Up!")
+	}
 	fmt.Printf("\nYou scored %d out of %d.\n", correct, total)
-	os.Exit(0)
 }
